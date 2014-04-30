@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+/*.node {
+    stroke: #fff;
+    stroke-width: 1.5px;
+}*/
+ .link {
+    stroke: #999;
+    stroke-opacity: .6;
+}
+/*circle {
+    fill: #ccc;
+    stroke: #333;
+    stroke-width: 1.5px;
+}
+circle :not(:hover) .nodetext{
+  display: none;
+}
+text {
+    font: 10px sans-serif;
+    pointer-events: none;
+    text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+}*/
+ div.tooltip {
+    position: absolute;
+    text-align: center;
+    /*    width: 60px;
+    height: 28px;*/
+    padding: 2px;
+    font: 12px sans-serif;
+    background: #fff;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+.parentelement::after {
+    content:"";
+    display: table;
+    clear: both;
+}
+</style>
+
+<body>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script>
+    var width = 1000,
+        height = 900;
+
+    var color = d3.scale.category20();
+
+    var force = d3.layout.force()
+        .charge(-120)
+        .linkDistance(30)
+        .size([width, height]);
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    var div = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    // Per-type markers, as they don't inherit styles.
+    svg.append("defs").selectAll("marker")
+        .data(["suit", "licensing", "resolved"])
+        .enter().append("marker")
+        .attr("id", function(d) {
+            return d;
+        })
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 15)
+        .attr("refY", -1.5)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5");
+
+    d3.json("wikipedia.json", function(error, graph) {
+        force
+            .nodes(graph.nodes)
+            .links(graph.links)
+            .start();
+
+        var link = svg.selectAll(".link")
+            .data(graph.links)
+            .enter().append("line")
+            .attr("class", "link")
+            .style("stroke-width", function(d) {
+                return Math.sqrt(d.value);
+            });
+
+        var circle = svg.append("g")
+            .selectAll("circle")
+            .data(force.nodes())
+            .enter().append("circle")
+            .attr("r", 6)
+        // .on("mouseover", function(d) {
+        //     div.transition()
+        //         .duration(200)
+        //         .style("opacity", .9);
+        //     div.html(d.name)
+        //         .style("left", (d3.event.pageX) + "px")
+        //         .style("top", (d3.event.pageY - 28) + "px");
+        // })
+        // .on("mouseout", function(d) {
+        //     div.transition()
+        //         .duration(500)
+        //         .style("opacity", 0);
+        // });
+        .style("fill", function(d) {
+            return color(d.depth);
+        })
+            .call(force.drag);
+
+        circle.on("mouseover", function(d) {
+            div.transition()
+                .duration(200)
+                .style("opacity", .9);
+            div.html(d.name)
+                .style("left", (d3.event.pageX) + "px")
+                .style("top", (d3.event.pageY - 28) + "px");
+        })
+            .on("mouseout", function(d) {
+                div.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            })
+            .on("click", function(d) {
+                var win = window.open(d.url, '_blank');
+                win.focus();
+            });
+
+
+        force.on("tick", function() {
+            link.attr("x1", function(d) {
+                return d.source.x;
+            })
+                .attr("y1", function(d) {
+                    return d.source.y;
+                })
+                .attr("x2", function(d) {
+                    return d.target.x;
+                })
+                .attr("y2", function(d) {
+                    return d.target.y;
+                });
+
+            circle.attr("cx", function(d) {
+                return d.x;
+            })
+                .attr("cy", function(d) {
+                    return d.y;
+                });
+
+        });
+
+        function mouseover() {
+            d3.select(this).select("circle").transition()
+                .duration(750)
+                .attr("r", 16);
+        }
+
+        function mouseout() {
+            d3.select(this).select("circle").transition()
+                .duration(750)
+                .attr("r", 8);
+        }
+    });
+    </script>
